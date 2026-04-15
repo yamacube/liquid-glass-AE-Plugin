@@ -1312,18 +1312,18 @@ LG_DoRender(
 
 	if (useAnalyticalSDF) {
 		/* ---- Analytical SDF path ----
-		 * The SDF rounded rectangle always matches the render buffer.
-		 * This ensures corners appear at the edges of whatever is
-		 * actually visible, regardless of layer position or scale. */
-		PF_FpLong halfW = width * 0.5;
-		PF_FpLong halfH = height * 0.5;
+		 * SDF represents the FULL LAYER's rounded rectangle.
+		 * Buffer renders only the visible portion via layer-space coords.
+		 * Comp-clipped edges use clipLeft/Right/Top/Bottom. */
+		PF_FpLong halfW = (PF_FpLong)ctx->layerW * 0.5;
+		PF_FpLong halfH = (PF_FpLong)ctx->layerH * 0.5;
 		PF_FpLong R = ctx->cornerRadius;
 		PF_FpLong maxR = (halfW < halfH) ? halfW : halfH;
 		if (R > maxR) R = maxR;
 
-		/* Center in layer-space coordinates (unified with ProcessScanline) */
-		ctx->sdfCx    = (PF_FpLong)ctx->bufOriginX + (PF_FpLong)(width  - 1) * 0.5;
-		ctx->sdfCy    = (PF_FpLong)ctx->bufOriginY + (PF_FpLong)(height - 1) * 0.5;
+		/* Center of full layer (layer-space) */
+		ctx->sdfCx    = (PF_FpLong)(ctx->layerW - 1) * 0.5;
+		ctx->sdfCy    = (PF_FpLong)(ctx->layerH - 1) * 0.5;
 		ctx->sdfHalfW = halfW;
 		ctx->sdfHalfH = halfH;
 		ctx->sdfRadius = R;
