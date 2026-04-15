@@ -1298,10 +1298,10 @@ LG_DoRender(
 	ctx->blurredWorld = &blurredWorld;
 
 	/* ---- Decide: Analytical SDF vs Chamfer distance ---- */
-	/* Use Chamfer distance (content-based) always for proper layer tracking.
-	 * Analytical SDF creates full-layer rectangle which doesn't follow
-	 * adjustment layer position/size changes. */
-	PF_Boolean useAnalyticalSDF = FALSE; /* Force Chamfer path for content-based glass */
+	/* Use Analytical SDF for visible-rect based glass tracking (B plan).
+	 * SDF represents the VISIBLE RECT as glass plate, positioned at bufOrigin.
+	 * This follows adjustment layer movement. */
+	PF_Boolean useAnalyticalSDF = (alphaSource == src) && (ctx->surfTension < 0.5);
 	ctx->useAnalyticalSDF = useAnalyticalSDF;
 
 	A_long pixelCount = width * height;
@@ -1310,19 +1310,19 @@ LG_DoRender(
 	PF_FpLong *outerDist = NULL;
 
 	if (useAnalyticalSDF) {
-		/* ---- Analytical SDF path ----
-		 * SDF represents the FULL LAYER's rounded rectangle.
-		 * Buffer renders only the visible portion via layer-space coords.
+		/* ---- Analytical SDF path (B plan: visible rect as glass plate) ----
+		 * SDF represents the VISIBLE BUFFER as glass plate.
+		 * Positioned at bufOrigin so it follows layer movement.
 		 * Comp-clipped edges use clipLeft/Right/Top/Bottom. */
-		PF_FpLong halfW = (PF_FpLong)ctx->layerW * 0.5;
-		PF_FpLong halfH = (PF_FpLong)ctx->layerH * 0.5;
+		PF_FpLong halfW = (PF_FpLong)width * 0.5;
+		PF_FpLong halfH = (PF_FpLong)height * 0.5;
 		PF_FpLong R = ctx->cornerRadius;
 		PF_FpLong maxR = (halfW < halfH) ? halfW : halfH;
 		if (R > maxR) R = maxR;
 
-		/* Center of full layer (layer-space) */
-		ctx->sdfCx    = (PF_FpLong)(ctx->layerW - 1) * 0.5;
-		ctx->sdfCy    = (PF_FpLong)(ctx->layerH - 1) * 0.5;
+		/* Center of visible rect in layer-space (B plan) */
+		ctx->sdfCx    = (PF_FpLong)ctx->bufOriginX + (PF_FpLong)(width  - 1) * 0.5;
+		ctx->sdfCy    = (PF_FpLong)ctx->bufOriginY + (PF_FpLong)(height - 1) * 0.5;
 		ctx->sdfHalfW = halfW;
 		ctx->sdfHalfH = halfH;
 		ctx->sdfRadius = R;
