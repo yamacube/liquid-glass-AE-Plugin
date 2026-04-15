@@ -1,0 +1,211 @@
+@startuml LiquidGlass_Architecture
+allowmixing
+title Liquid Glass v4.0 — 設計案
+skinparam backgroundColor white
+skinparam defaultFontColor #222222
+skinparam defaultFontSize 12
+skinparam classFontColor #222222
+skinparam classBackgroundColor #e8f4fd
+skinparam classBorderColor #3498db
+skinparam arrowColor #e74c3c
+skinparam noteBackgroundColor #fef9e7
+skinparam noteBorderColor #f39c12
+skinparam noteFontColor #222222
+skinparam packageBackgroundColor #f8f9fa
+skinparam packageBorderColor #7f8c8d
+skinparam packageFontColor #222222
+skinparam rectangleBackgroundColor #eaf2f8
+skinparam rectangleBorderColor #2980b9
+skinparam cardBackgroundColor #fdfefe
+skinparam cardBorderColor #bdc3c7
+
+' ============================================================
+'  パラメータ一覧
+' ============================================================
+
+package "Parameters" as params {
+  class "Textures" as tex {
+    + Shape Layer : LAYER
+    + Background Layer : LAYER  **[NEW]**
+  }
+
+  class "Refraction" as refract {
+    + Bevel Width : FLOAT [1..200]
+    + Bevel Falloff : FLOAT [10..300] %
+    + Refraction Strength : FLOAT [0..200]
+    + Chromatic Ab : FLOAT [0..50]
+    + Chrom Decay : FLOAT [10..500] %
+    + Noise Amount : FLOAT [0..100]
+  }
+
+  class "Glass Surface" as glass {
+    + Frost Blur : FLOAT [0..200]
+    + Specular Intensity : FLOAT [0..100]
+    + Light Angle : ANGLE
+    + Saturation : FLOAT [0..200] %
+    + Tint Color : COLOR
+    + Tint Opacity : FLOAT [0..100] %
+  }
+
+  class "Shape Control  **[NEW]**" as shape {
+    + Surface Tension : FLOAT [0..100]  **[NEW]**
+    + Tension Threshold : FLOAT [1..255]  **[NEW]**
+  }
+
+  class "Inner Shadow" as ishadow {
+    + Spread : FLOAT [-50..50]
+    + Blur : FLOAT [0..100]
+    + Color : COLOR
+  }
+
+  class "Outer Shadow" as oshadow {
+    + Spread : FLOAT [-50..50]
+    + Blur : FLOAT [0..100]
+    + Color : COLOR
+  }
+}
+
+' ============================================================
+'  レンダリングパイプライン
+' ============================================================
+
+package "Rendering Pipeline" as pipeline {
+
+  rectangle "**Step 0: Input Resolution**" as step0 {
+    card "src = Input Layer pixels" as s0a
+    card "alphaSource = Shape Layer ?? src" as s0b
+    card "bgSource = Background Layer ?? src  **[NEW]**" as s0c
+  }
+
+  rectangle "**Step 1: Surface Tension (Metaball)**  [NEW]" as step1 #e8daef {
+    card "1a. alphaSource → extract alpha channel\n    into A_u_char buffer" as s1a
+    card "1b. Gaussian blur alpha\n    (radius = Surface Tension param)" as s1b
+    card "1c. Threshold (Tension Threshold param)\n    → binary metaball mask" as s1c
+    card "1d. Store as processedAlpha buffer\n    (used by Step 2 & Step 4)" as s1d
+  }
+
+  rectangle "**Step 2: Distance Fields**" as step2 {
+    card "2a. Chamfer Distance Transform (inner)\n    seed: processedAlpha (opaque → 0)" as s2a
+    card "2b. Chamfer Distance Transform (outer)\n    seed: processedAlpha (transparent → 0)" as s2b
+    card "2c. Smooth distance fields\n    (3x3 box filter, multi-pass)" as s2c
+  }
+
+  rectangle "**Step 3: Frost Blur**" as step3 {
+    card "3. Gaussian blur bgSource → blurredWorld\n   (radius = Frost Blur param)" as s3
+  }
+
+  rectangle "**Step 4: Per-Pixel Compositing (multi-threaded)**" as step4 {
+    card "4a. Sobel 3×3 gradient on innerDist\n    → surface normal (nx, ny)" as s4a
+    card "4b. Bevel profile derivative\n    slope = exp(-0.5 * (iDist/σ)²)" as s4b
+    card "4c. **Refraction displacement**\n    (dX,dY) = normal × slope × strength\n    → sample blurredWorld at displaced pos" as s4c
+    card "4d. **Chromatic Aberration**\n    R/B offset along normal at edge" as s4d
+    card "4e. **Fresnel reflection** (Schlick⁵)\n    blend refracted + reflected sample" as s4e
+    card "4f. **Rim light** (slope³ × specular)\n    omnidirectional edge glow" as s4f
+    card "4g. **Directional specular**\n    (N·L)⁴ × slope × intensity" as s4g
+    card "4h. Saturation / Tint / Shadows\n    → final output pixel" as s4h
+  }
+}
+
+' ============================================================
+'  フロー
+' ============================================================
+
+step0 -down-> step1
+step1 -down-> step2
+step0 -down-> step3
+step2 -down-> step4
+step3 -down-> step4
+
+' ============================================================
+'  AE レイヤー構成
+' ============================================================
+
+package "After Effects — Layer Setup" as ae_setup {
+
+  rectangle "**パターンA: 調整レイヤー方式**" as patternA {
+    card "3. Adjustment Layer\n   → Liquid Glass applied\n   Shape Layer = 2" as layA3
+    card "2. Shape Layer (text/shape precomp)\n   → defines glass alpha" as layA2
+    card "1. Background (image/video)\n   → refracted content" as layA1
+  }
+
+  rectangle "**パターンB: 直接適用方式  [NEW]**" as patternB #e8daef {
+    card "2. Text / Shape Layer\n   → Liquid Glass applied\n   Background Layer = 1" as layB2
+    card "1. Background (image/video)\n   → specified as Background Layer" as layB1
+  }
+}
+
+note right of patternB
+  Background Layer パラメータにより
+  調整レイヤーなしで直接適用可能。
+  自身のalphaがガラス形状を定義し、
+  Background Layer が屈折される背景。
+end note
+
+' ============================================================
+'  メタボール表面張力の原理
+' ============================================================
+
+package "Surface Tension — Metaball Principle" as metaball {
+
+  rectangle "Before (Surface Tension = 0)" as mb_before {
+    card "  ●       ●  \n (shape A) (shape B)\n separated, no merge" as mb1
+  }
+
+  rectangle "After  (Surface Tension = 30)" as mb_after #e8daef {
+    card "  ●●●●●●●  \n    merged blob   \n alpha blurred + thresholded\n → shapes fuse like liquid" as mb2
+  }
+
+  mb_before -right-> mb_after : "blur α\n+ threshold"
+}
+
+' ============================================================
+'  変更が必要なファイル
+' ============================================================
+
+package "Files to Modify" as files {
+  class "LiquidGlass.h" as fh {
+    + LG_BG_LAYER (new enum)
+    + LG_SHAPE_START / END (new group)
+    + LG_SURFACE_TENSION (new enum)
+    + LG_TENSION_THRESHOLD (new enum)
+    + Default values
+    + Disk IDs
+  }
+
+  class "LiquidGlass.cpp" as fcpp {
+    + ParamsSetup: add 3 new params
+    + LG_RenderCtx: add processedAlpha*
+    + LG_DoRender: add metaball preprocessing
+    + LG_ChamferDist: option to use processedAlpha
+    + LG_ProcessScanline: use processedAlpha for isOpaque
+    + SmartPreRender: checkout BG layer
+    + SmartRender: checkout BG layer world
+    + Render: checkout BG layer
+  }
+
+  class "LiquidGlassPiPL.r" as fr {
+    + No changes needed
+  }
+
+  class "LiquidGlass_Strings.h/cpp" as fstr {
+    + StrID_BG_Layer
+    + StrID_Shape_Group
+    + StrID_Surface_Tension
+    + StrID_Tension_Threshold
+  }
+}
+
+' ============================================================
+'  今後の拡張（Phase 2）
+' ============================================================
+
+package "Future (Phase 2)" as future {
+  card "GPU / Metal rendering" as gpu
+  card "Bevel Shape control (power curve)" as bshape
+  card "IOR-based refraction (Snell's law)" as ior
+  card "Absorption (Beer-Lambert)" as absorb
+  card "Presets system" as presets
+  card "Edge Cleanup (AA, edge blur)" as cleanup
+}
+
+@enduml

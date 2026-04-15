@@ -1,0 +1,283 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA000001 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA000010 /* Cocoa.framework */; };
+		AA000002 /* LiquidGlass_Strings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AA000020 /* LiquidGlass_Strings.cpp */; };
+		AA000003 /* LiquidGlass.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AA000021 /* LiquidGlass.cpp */; };
+		AA000004 /* LiquidGlassPiPL.r in Rez */ = {isa = PBXBuildFile; fileRef = AA000022 /* LiquidGlassPiPL.r */; };
+		AA000005 /* AEGP_SuiteHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AA000030 /* AEGP_SuiteHandler.cpp */; };
+		AA000006 /* MissingSuiteError.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AA000032 /* MissingSuiteError.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA000010 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		AA000011 /* LiquidGlass.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LiquidGlass.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA000020 /* LiquidGlass_Strings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LiquidGlass_Strings.cpp; path = ../LiquidGlass_Strings.cpp; sourceTree = SOURCE_ROOT; };
+		AA000021 /* LiquidGlass.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LiquidGlass.cpp; path = ../LiquidGlass.cpp; sourceTree = SOURCE_ROOT; };
+		AA000022 /* LiquidGlassPiPL.r */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.rez; name = LiquidGlassPiPL.r; path = ../LiquidGlassPiPL.r; sourceTree = SOURCE_ROOT; };
+		AA000023 /* LiquidGlass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LiquidGlass.h; path = ../LiquidGlass.h; sourceTree = SOURCE_ROOT; };
+		AA000024 /* LiquidGlass_Strings.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LiquidGlass_Strings.h; path = ../LiquidGlass_Strings.h; sourceTree = SOURCE_ROOT; };
+		AA000025 /* AE_Effect.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AE_Effect.h; path = ../../../Headers/AE_Effect.h; sourceTree = "<group>"; };
+		AA000026 /* AE_PluginData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AE_PluginData.h; path = ../../../Headers/AE_PluginData.h; sourceTree = "<group>"; };
+		AA000030 /* AEGP_SuiteHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AEGP_SuiteHandler.cpp; path = ../../../Util/AEGP_SuiteHandler.cpp; sourceTree = SOURCE_ROOT; };
+		AA000031 /* AEGP_SuiteHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AEGP_SuiteHandler.h; path = ../../../Util/AEGP_SuiteHandler.h; sourceTree = SOURCE_ROOT; };
+		AA000032 /* MissingSuiteError.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MissingSuiteError.cpp; path = ../../../Util/MissingSuiteError.cpp; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA100001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000001 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA200001 = {
+			isa = PBXGroup;
+			children = (
+				AA000021 /* LiquidGlass.cpp */,
+				AA000023 /* LiquidGlass.h */,
+				AA000020 /* LiquidGlass_Strings.cpp */,
+				AA000024 /* LiquidGlass_Strings.h */,
+				AA000022 /* LiquidGlassPiPL.r */,
+				AA200003 /* Supporting Code */,
+				AA000010 /* Cocoa.framework */,
+				AA200002 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA200002 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA000011 /* LiquidGlass.plugin */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA200003 /* Supporting Code */ = {
+			isa = PBXGroup;
+			children = (
+				AA000025 /* AE_Effect.h */,
+				AA000026 /* AE_PluginData.h */,
+				AA000030 /* AEGP_SuiteHandler.cpp */,
+				AA000031 /* AEGP_SuiteHandler.h */,
+				AA000032 /* MissingSuiteError.cpp */,
+			);
+			name = "Supporting Code";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA300001 /* LiquidGlass */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA500002 /* Build configuration list for PBXNativeTarget "LiquidGlass" */;
+			buildPhases = (
+				AA100002 /* Resources */,
+				AA100003 /* Sources */,
+				AA100001 /* Frameworks */,
+				AA100004 /* Rez */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LiquidGlass;
+			productName = LiquidGlass.plugin;
+			productReference = AA000011 /* LiquidGlass.plugin */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA400001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0720;
+			};
+			buildConfigurationList = AA500001 /* Build configuration list for PBXProject "LiquidGlass" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = AA200001;
+			productRefGroup = AA200002 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA300001 /* LiquidGlass */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA100002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXRezBuildPhase section */
+		AA100004 /* Rez */ = {
+			isa = PBXRezBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000004 /* LiquidGlassPiPL.r in Rez */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXRezBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA100003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA000002 /* LiquidGlass_Strings.cpp in Sources */,
+				AA000003 /* LiquidGlass.cpp in Sources */,
+				AA000005 /* AEGP_SuiteHandler.cpp in Sources */,
+				AA000006 /* MissingSuiteError.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA600001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				ENABLE_TESTABILITY = YES;
+				GCC_INPUT_FILETYPE = sourcecode.cpp.objcpp;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Cocoa.framework/Headers/Cocoa.h";
+				GCC_REUSE_STRINGS = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_THREADSAFE_STATICS = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					../../../Headers,
+					../../../Util,
+					../../../Headers/SP,
+					../../../Resources,
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				REZ_PREPROCESSOR_DEFINITIONS = __MACH__;
+				SDKROOT = macosx;
+				STRIP_INSTALLED_PRODUCT = NO;
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Debug;
+		};
+		AA600002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_INPUT_FILETYPE = sourcecode.cpp.objcpp;
+				GCC_MODEL_TUNING = "";
+				GCC_OPTIMIZATION_LEVEL = s;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Cocoa.framework/Headers/Cocoa.h";
+				GCC_REUSE_STRINGS = NO;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_THREADSAFE_STATICS = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_CHECK_SWITCH_STATEMENTS = YES;
+				GCC_WARN_EFFECTIVE_CPLUSPLUS_VIOLATIONS = NO;
+				GCC_WARN_MISSING_PARENTHESES = YES;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_LABEL = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					../../../Headers,
+					../../../Util,
+					../../../Headers/SP,
+					../../../Resources,
+				);
+				REZ_PREPROCESSOR_DEFINITIONS = __MACH__;
+				SDKROOT = macosx;
+				STRIP_INSTALLED_PRODUCT = YES;
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Release;
+		};
+		AA700001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_MODEL_TUNING = G5;
+				GENERATE_PKGINFO_FILE = YES;
+				INFOPLIST_FILE = "LiquidGlass.plugin-Info.plist";
+				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yamaha.AfterEffects.LiquidGlass;
+				PRODUCT_NAME = LiquidGlass;
+				SDKROOT = macosx;
+				ZERO_LINK = NO;
+			};
+			name = Debug;
+		};
+		AA700002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_MODEL_TUNING = G5;
+				GENERATE_PKGINFO_FILE = YES;
+				INFOPLIST_FILE = "LiquidGlass.plugin-Info.plist";
+				INSTALL_PATH = "$(HOME)/Library/Bundles";
+				PRODUCT_BUNDLE_IDENTIFIER = com.yamaha.AfterEffects.LiquidGlass;
+				PRODUCT_NAME = LiquidGlass;
+				SDKROOT = macosx;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA500001 /* Build configuration list for PBXProject "LiquidGlass" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA600001 /* Debug */,
+				AA600002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 1;
+			defaultConfigurationName = Release;
+		};
+		AA500002 /* Build configuration list for PBXNativeTarget "LiquidGlass" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA700001 /* Debug */,
+				AA700002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA400001 /* Project object */;
+}
