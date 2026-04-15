@@ -849,15 +849,18 @@ LG_ProcessScanline(void *refconPV, A_long /*thread_indexL*/, A_long y, A_long /*
 		PF_Boolean isOpaque;
 
 		if (ctx->useAnalyticalSDF) {
-			PF_FpLong sdf = LG_RoundedRectSDF((PF_FpLong)x, (PF_FpLong)y,
+			/* Convert buffer coordinates to layer-space for SDF evaluation */
+			PF_FpLong layerX = (PF_FpLong)x + ctx->bufOriginX;
+			PF_FpLong layerY = (PF_FpLong)y + ctx->bufOriginY;
+			PF_FpLong sdf = LG_RoundedRectSDF(layerX, layerY,
 				ctx->sdfCx, ctx->sdfCy, ctx->sdfHalfW, ctx->sdfHalfH, ctx->sdfRadius,
-				FALSE, FALSE, FALSE, FALSE);
+				ctx->clipLeft, ctx->clipRight, ctx->clipTop, ctx->clipBottom);
 			isOpaque = (sdf <= 0.5);
 			iDist = (sdf <= 0.0) ? -sdf : 0.0;   /* positive inside */
 			oDist = (sdf > 0.0) ? sdf : 0.0;      /* positive outside */
-			LG_RoundedRectNormal((PF_FpLong)x, (PF_FpLong)y,
+			LG_RoundedRectNormal(layerX, layerY,
 				ctx->sdfCx, ctx->sdfCy, ctx->sdfHalfW, ctx->sdfHalfH, ctx->sdfRadius,
-				FALSE, FALSE, FALSE, FALSE,
+				ctx->clipLeft, ctx->clipRight, ctx->clipTop, ctx->clipBottom,
 				&nx, &ny);
 			/* SDF normal points outward, but inner path expects
 			 * inward normal (matching Sobel on inner distance).
@@ -1318,9 +1321,9 @@ LG_DoRender(
 		PF_FpLong maxR = (halfW < halfH) ? halfW : halfH;
 		if (R > maxR) R = maxR;
 
-		/* Center of buffer */
-		ctx->sdfCx    = (PF_FpLong)(width  - 1) * 0.5;
-		ctx->sdfCy    = (PF_FpLong)(height - 1) * 0.5;
+		/* Center in layer-space coordinates (accounting for buffer origin offset) */
+		ctx->sdfCx    = (PF_FpLong)ctx->bufOriginX + (PF_FpLong)(width  - 1) * 0.5;
+		ctx->sdfCy    = (PF_FpLong)ctx->bufOriginY + (PF_FpLong)(height - 1) * 0.5;
 		ctx->sdfHalfW = halfW;
 		ctx->sdfHalfH = halfH;
 		ctx->sdfRadius = R;
@@ -1528,15 +1531,40 @@ Render(
 	ctx.cornerRadius = params[LG_CORNER_RADIUS]->u.fs_d.value * dsX;
 	ctx.surfTension  = params[LG_SURFACE_TENSION]->u.fs_d.value;
 	ctx.tensionThresh= params[LG_TENSION_THRESHOLD]->u.fs_d.value;
-	ctx.clipLeft = ctx.clipRight = ctx.clipTop = ctx.clipBottom = FALSE;
 
-	/* In the legacy Render path (used by 3D layers), set full layer
-	 * geometry from comp dimensions so SDF corners stay consistent.
-	 * in_data->width/height = comp dimensions at current resolution. */
-	ctx.layerW = in_data->width;
-	ctx.layerH = in_data->height;
-	ctx.bufOriginX = 0;
-	ctx.bufOriginY = 0;
+	/* In the legacy Render path (used by 3D layers), derive buffer origin
+	 * and clipping from extent_hint so SDF matches layer position.
+	 * extent_hint is in layer-local coordinates relative to output buffer. */
+	{
+		PF_LRect eh = in_data->extent_hint;
+		A_long fullW = in_data->width;
+		A_long fullH = in_data->height;
+		A_long bufW  = output->width;
+		A_long bufH  = output->height;
+
+		/* Buffer origin: where this render buffer starts in layer coordinates.
+		 * For 3D layers, extent_hint gives us the layer's position. */
+		ctx.bufOriginX = eh.left;
+		ctx.bufOriginY = eh.top;
+		ctx.layerW     = fullW;
+		ctx.layerH     = fullH;
+
+		/* Clipping: buffer edge doesn't reach layer edge (2px tolerance) */
+		ctx.clipLeft   = (eh.left   > 2);
+		ctx.clipRight  = (eh.right  < (fullW - 2));
+		ctx.clipTop    = (eh.top    > 2);
+		ctx.clipBottom = (eh.bottom < (fullH - 2));
+
+		/* If buffer covers full layer, no clipping */
+		if (bufW >= fullW - 2) {
+			ctx.clipLeft = ctx.clipRight = FALSE;
+			ctx.bufOriginX = 0;
+		}
+		if (bufH >= fullH - 2) {
+			ctx.clipTop = ctx.clipBottom = FALSE;
+			ctx.bufOriginY = 0;
+		}
+	}
 
 	/* Debug: log legacy path values */
 	{
