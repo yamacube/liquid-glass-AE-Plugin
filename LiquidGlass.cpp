@@ -1970,16 +1970,28 @@ EffectMain(
 				break;
 
 			case PF_Cmd_RENDER:
-				err = Render(in_data, out_data, params, output);
-				break;
+			{
+				FILE *f = fopen("/tmp/lg_path.txt", "a");
+				if (f) { fprintf(f, "RENDER (legacy)\n"); fclose(f); }
+			}
+			err = Render(in_data, out_data, params, output);
+			break;
 
 			case PF_Cmd_SMART_PRE_RENDER:
-				err = PreRender(in_data, out_data, (PF_PreRenderExtra *)extra);
-				break;
+			{
+				FILE *f = fopen("/tmp/lg_path.txt", "a");
+				if (f) { fprintf(f, "SMART_PRE_RENDER\n"); fclose(f); }
+			}
+			err = PreRender(in_data, out_data, (PF_PreRenderExtra *)extra);
+			break;
 
 			case PF_Cmd_SMART_RENDER:
-				err = SmartRender(in_data, out_data, (PF_SmartRenderExtra *)extra);
-				break;
+			{
+				FILE *f = fopen("/tmp/lg_path.txt", "a");
+				if (f) { fprintf(f, "SMART_RENDER\n"); fclose(f); }
+			}
+			err = SmartRender(in_data, out_data, (PF_SmartRenderExtra *)extra);
+			break;
 		}
 	}
 	catch (PF_Err &thrown_err) {
