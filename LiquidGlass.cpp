@@ -1298,11 +1298,10 @@ LG_DoRender(
 	ctx->blurredWorld = &blurredWorld;
 
 	/* ---- Decide: Analytical SDF vs Chamfer distance ---- */
-	/* Use analytical SDF when:
-	 *   - alphaSource == src (no separate Shape Layer)
-	 *   - Surface Tension is off
-	 * This gives exact Euclidean distance and smooth normals. */
-	PF_Boolean useAnalyticalSDF = (alphaSource == src) && (ctx->surfTension < 0.5);
+	/* Use Chamfer distance (content-based) always for proper layer tracking.
+	 * Analytical SDF creates full-layer rectangle which doesn't follow
+	 * adjustment layer position/size changes. */
+	PF_Boolean useAnalyticalSDF = FALSE; /* Force Chamfer path for content-based glass */
 	ctx->useAnalyticalSDF = useAnalyticalSDF;
 
 	A_long pixelCount = width * height;
