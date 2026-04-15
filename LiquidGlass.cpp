@@ -849,9 +849,9 @@ LG_ProcessScanline(void *refconPV, A_long /*thread_indexL*/, A_long y, A_long /*
 		PF_Boolean isOpaque;
 
 		if (ctx->useAnalyticalSDF) {
-			/* Use buffer-space coordinates for SDF evaluation (unified with sdfCx/sdfCy) */
-			PF_FpLong px = (PF_FpLong)x;
-			PF_FpLong py = (PF_FpLong)y;
+			/* Convert buffer coordinates to layer-space for SDF evaluation (unified) */
+			PF_FpLong px = (PF_FpLong)x + ctx->bufOriginX;
+			PF_FpLong py = (PF_FpLong)y + ctx->bufOriginY;
 			PF_FpLong sdf = LG_RoundedRectSDF(px, py,
 				ctx->sdfCx, ctx->sdfCy, ctx->sdfHalfW, ctx->sdfHalfH, ctx->sdfRadius,
 				ctx->clipLeft, ctx->clipRight, ctx->clipTop, ctx->clipBottom);
@@ -1321,9 +1321,9 @@ LG_DoRender(
 		PF_FpLong maxR = (halfW < halfH) ? halfW : halfH;
 		if (R > maxR) R = maxR;
 
-		/* Center in buffer-space coordinates (matching ProcessScanline buffer coords) */
-		ctx->sdfCx    = (PF_FpLong)(width  - 1) * 0.5;
-		ctx->sdfCy    = (PF_FpLong)(height - 1) * 0.5;
+		/* Center in layer-space coordinates (unified with ProcessScanline) */
+		ctx->sdfCx    = (PF_FpLong)ctx->bufOriginX + (PF_FpLong)(width  - 1) * 0.5;
+		ctx->sdfCy    = (PF_FpLong)ctx->bufOriginY + (PF_FpLong)(height - 1) * 0.5;
 		ctx->sdfHalfW = halfW;
 		ctx->sdfHalfH = halfH;
 		ctx->sdfRadius = R;
