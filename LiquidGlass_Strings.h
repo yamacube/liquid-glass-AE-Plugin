@@ -17,6 +17,7 @@ typedef enum {
 	StrID_Corner_Radius,
 	StrID_Surface_Tension,
 	StrID_Tension_Threshold,
+	StrID_Clip_Comp_Bounds,
 
 	StrID_Refract_Group,
 	StrID_Bevel_Width,

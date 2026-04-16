@@ -143,6 +143,14 @@ ParamsSetup(
 						 0, 0,
 						 TENSION_THRESHOLD_DISK_ID);
 
+	/* Clip at Comp Bounds: clip edges when glass goes outside comp */
+	AEFX_CLR_STRUCT(def);
+	PF_STRCPY(def.name, STR(StrID_Clip_Comp_Bounds));
+	def.param_type = PF_Param_CHECKBOX;
+	def.u.bd.dephault = LG_CLIP_COMP_BOUNDS_DFLT;
+	def.uu.id = CLIP_COMP_BOUNDS_DISK_ID;
+	ERR(PF_ADD_PARAM(in_data, -1, &def));
+
 	AEFX_CLR_STRUCT(def);
 	PF_END_TOPIC(SHAPE_END_DISK_ID);
 
@@ -803,6 +811,7 @@ struct LG_RenderCtx {
 
 	PF_FpLong cornerRadius;
 	PF_FpLong surfTension, tensionThresh;
+	PF_Boolean clipCompBounds;  /* clip edges when glass goes outside comp */
 
 	/* Analytical SDF mode (rounded rectangle) */
 	PF_Boolean useAnalyticalSDF;
@@ -841,27 +850,99 @@ LG_ProcessScanline(void *refconPV, A_long /*thread_indexL*/, A_long y, A_long /*
 	A_long width  = ctx->width;
 	A_long height = ctx->height;
 
+	/* Check if this row is outside comp bounds (for clipCompBounds) */
+	if (ctx->clipCompBounds) {
+		/* Expanded margin (20px) to ensure all glass effects including shadows are clipped */
+		const A_long MARGIN = 20;
+		
+		/* When clipTop is TRUE, rows near top boundary are outside comp */
+		if (ctx->clipTop && y < MARGIN) {
+			for (A_long x = 0; x < width; x++) {
+				if (ctx->deep) {
+					PF_Pixel16 *outP = LG_GetPixel16(ctx->output, x, y);
+					PF_Pixel16 *srcP = LG_GetPixel16(ctx->src, x, y);
+					*outP = *srcP;
+				} else {
+					PF_Pixel8 *outP = LG_GetPixel8(ctx->output, x, y);
+					PF_Pixel8 *srcP = LG_GetPixel8(ctx->src, x, y);
+					*outP = *srcP;
+				}
+			}
+			return PF_Err_NONE;
+		}
+		/* When clipBottom is TRUE, rows near bottom boundary are outside comp */
+		if (ctx->clipBottom && y >= height - MARGIN) {
+			for (A_long x = 0; x < width; x++) {
+				if (ctx->deep) {
+					PF_Pixel16 *outP = LG_GetPixel16(ctx->output, x, y);
+					PF_Pixel16 *srcP = LG_GetPixel16(ctx->src, x, y);
+					*outP = *srcP;
+				} else {
+					PF_Pixel8 *outP = LG_GetPixel8(ctx->output, x, y);
+					PF_Pixel8 *srcP = LG_GetPixel8(ctx->src, x, y);
+					*outP = *srcP;
+				}
+			}
+			return PF_Err_NONE;
+		}
+	}
+
 	for (A_long x = 0; x < width; x++) {
 		A_long idx = y * width + x;
+
+		/* Check if pixel is outside comp bounds (horizontal) */
+		if (ctx->clipCompBounds) {
+			/* Expanded margin to match vertical (20px) */
+			if ((ctx->clipLeft && x < 20) || (ctx->clipRight && x >= width - 20)) {
+				/* Skip glass effects - copy input pixel */
+				if (ctx->deep) {
+					PF_Pixel16 *outP = LG_GetPixel16(ctx->output, x, y);
+					PF_Pixel16 *srcP = LG_GetPixel16(ctx->src, x, y);
+					*outP = *srcP;
+				} else {
+					PF_Pixel8 *outP = LG_GetPixel8(ctx->output, x, y);
+					PF_Pixel8 *srcP = LG_GetPixel8(ctx->src, x, y);
+					*outP = *srcP;
+				}
+				continue;
+			}
+		}
 
 		/* --- Compute distance, normal, and inside/outside per pixel --- */
 		PF_FpLong iDist, oDist, nx, ny;
 		PF_Boolean isOpaque;
 
 		if (ctx->useAnalyticalSDF) {
-			/* Convert buffer coordinates to layer-space for SDF evaluation (unified) */
-			PF_FpLong px = (PF_FpLong)x + ctx->bufOriginX;
-			PF_FpLong py = (PF_FpLong)y + ctx->bufOriginY;
-			PF_FpLong sdf = LG_RoundedRectSDF(px, py,
-				ctx->sdfCx, ctx->sdfCy, ctx->sdfHalfW, ctx->sdfHalfH, ctx->sdfRadius,
-				ctx->clipLeft, ctx->clipRight, ctx->clipTop, ctx->clipBottom);
-			isOpaque = (sdf <= 0.5);
-			iDist = (sdf <= 0.0) ? -sdf : 0.0;   /* positive inside */
-			oDist = (sdf > 0.0) ? sdf : 0.0;      /* positive outside */
-			LG_RoundedRectNormal(px, py,
-				ctx->sdfCx, ctx->sdfCy, ctx->sdfHalfW, ctx->sdfHalfH, ctx->sdfRadius,
-				ctx->clipLeft, ctx->clipRight, ctx->clipTop, ctx->clipBottom,
-				&nx, &ny);
+			/* Current Layer Alpha mode: read input alpha as glass shape */
+			if (ctx->alphaSource == ctx->src) {
+				/* Read alpha from input layer (mask is already applied) */
+				A_u_char alpha;
+				if (ctx->deep) {
+					PF_Pixel16 *p = LG_GetPixel16(ctx->src, x, y);
+					alpha = (A_u_char)(p->alpha * 255 / PF_MAX_CHAN16);
+				} else {
+					PF_Pixel8 *p = LG_GetPixel8(ctx->src, x, y);
+					alpha = p->alpha;
+				}
+				isOpaque = (alpha > 128);  /* alpha > 0.5 */
+				iDist = isOpaque ? 1.0 : 0.0;  /* simplified distance */
+				oDist = isOpaque ? 0.0 : 1.0;
+				nx = 0.0; ny = 0.0;  /* neutral normal */
+			} else {
+				/* Shape Layer mode: use rounded rect SDF */
+				PF_FpLong px = (PF_FpLong)x + ctx->bufOriginX;
+				PF_FpLong py = (PF_FpLong)y + ctx->bufOriginY;
+				PF_FpLong sdf = LG_RoundedRectSDF(px, py,
+					ctx->sdfCx, ctx->sdfCy, ctx->sdfHalfW, ctx->sdfHalfH, ctx->sdfRadius,
+					ctx->clipLeft, ctx->clipRight, ctx->clipTop, ctx->clipBottom);
+				isOpaque = (sdf <= 0.5);
+				iDist = (sdf <= 0.0) ? -sdf : 0.0;   /* positive inside */
+				oDist = (sdf > 0.0) ? sdf : 0.0;      /* positive outside */
+				LG_RoundedRectNormal(px, py,
+					ctx->sdfCx, ctx->sdfCy, ctx->sdfHalfW, ctx->sdfHalfH, ctx->sdfRadius,
+					ctx->clipLeft, ctx->clipRight, ctx->clipTop, ctx->clipBottom,
+					&nx, &ny);
+			}
 			/* SDF normal points outward, but inner path expects
 			 * inward normal (matching Sobel on inner distance).
 			 * Negate for inside pixels so refraction pushes sampling
@@ -1530,6 +1611,7 @@ Render(
 	ctx.cornerRadius = params[LG_CORNER_RADIUS]->u.fs_d.value * dsX;
 	ctx.surfTension  = params[LG_SURFACE_TENSION]->u.fs_d.value;
 	ctx.tensionThresh= params[LG_TENSION_THRESHOLD]->u.fs_d.value;
+	ctx.clipCompBounds = params[LG_CLIP_COMP_BOUNDS]->u.bd.value;
 
 	/* In the legacy Render path (used by 3D layers), derive buffer origin
 	 * and clipping from extent_hint so SDF matches layer position.
@@ -1548,20 +1630,26 @@ Render(
 		ctx.layerW     = fullW;
 		ctx.layerH     = fullH;
 
-		/* Clipping: buffer edge doesn't reach layer edge (2px tolerance) */
-		ctx.clipLeft   = (eh.left   > 2);
-		ctx.clipRight  = (eh.right  < (fullW - 2));
-		ctx.clipTop    = (eh.top    > 2);
-		ctx.clipBottom = (eh.bottom < (fullH - 2));
+		/* Clip at Comp Bounds: When OFF, show edges even outside comp */
+		if (ctx.clipCompBounds) {
+			/* Clipping: buffer edge doesn't reach layer edge (2px tolerance) */
+			ctx.clipLeft   = (eh.left   > 2);
+			ctx.clipRight  = (eh.right  < (fullW - 2));
+			ctx.clipTop    = (eh.top    > 2);
+			ctx.clipBottom = (eh.bottom < (fullH - 2));
 
-		/* If buffer covers full layer, no clipping */
-		if (bufW >= fullW - 2) {
-			ctx.clipLeft = ctx.clipRight = FALSE;
-			ctx.bufOriginX = 0;
-		}
-		if (bufH >= fullH - 2) {
-			ctx.clipTop = ctx.clipBottom = FALSE;
-			ctx.bufOriginY = 0;
+			/* If buffer covers full layer, no clipping */
+			if (bufW >= fullW - 2) {
+				ctx.clipLeft = ctx.clipRight = FALSE;
+				ctx.bufOriginX = 0;
+			}
+			if (bufH >= fullH - 2) {
+				ctx.clipTop = ctx.clipBottom = FALSE;
+				ctx.bufOriginY = 0;
+			}
+		} else {
+			/* Show edges even when glass goes outside comp */
+			ctx.clipLeft = ctx.clipRight = ctx.clipTop = ctx.clipBottom = FALSE;
 		}
 	}
 
@@ -1600,6 +1688,8 @@ struct LG_PreRenderData {
 	PF_FpLong surfTension, tensionThresh;
 	PF_Boolean hasShapeLayer;
 	PF_Boolean hasBGLayer;
+	/* Clip edges when glass goes outside comp bounds */
+	PF_Boolean clipCompBounds;
 	/* Comp boundary clip: layer extends beyond comp on this edge */
 	PF_Boolean clipLeft, clipRight, clipTop, clipBottom;
 	/* Full layer geometry for SDF (comp coords) */
@@ -1722,6 +1812,11 @@ PreRender(
 	ERR(PF_CHECKOUT_PARAM(in_data, LG_TENSION_THRESHOLD, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
 	infoP->tensionThresh = cur.u.fs_d.value;
 
+	/* Clip at Comp Bounds */
+	AEFX_CLR_STRUCT(cur);
+	ERR(PF_CHECKOUT_PARAM(in_data, LG_CLIP_COMP_BOUNDS, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
+	infoP->clipCompBounds = cur.u.bd.value;
+
 	/* Check shape layer */
 	AEFX_CLR_STRUCT(cur);
 	ERR(PF_CHECKOUT_PARAM(in_data, LG_SHAPE_LAYER, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
@@ -1772,21 +1867,28 @@ PreRender(
 		A_long bufOX = vis.left;
 		A_long bufOY = vis.top;
 
-		/* Clipping: vis edge doesn't reach the full layer edge.
-		 * We give a small tolerance of 2px for AE rounding. */
-		infoP->clipLeft   = (vis.left   > 2);
-		infoP->clipRight  = (vis.right  < (fullW - 2));
-		infoP->clipTop    = (vis.top    > 2);
-		infoP->clipBottom = (vis.bottom < (fullH - 2));
+		/* Clip at Comp Bounds: When OFF, don't clip at comp edges
+		 * When ON (default), clip edges where glass goes outside comp */
+		if (infoP->clipCompBounds) {
+			/* Clipping: vis edge doesn't reach the full layer edge.
+			 * We give a small tolerance of 2px for AE rounding. */
+			infoP->clipLeft   = (vis.left   > 2);
+			infoP->clipRight  = (vis.right  < (fullW - 2));
+			infoP->clipTop    = (vis.top    > 2);
+			infoP->clipBottom = (vis.bottom < (fullH - 2));
 
-		/* But if vis covers the full layer on an axis, no clip. */
-		if (visW >= fullW - 2) {
-			infoP->clipLeft = infoP->clipRight = FALSE;
-			bufOX = 0;  /* buffer == full layer width */
-		}
-		if (visH >= fullH - 2) {
-			infoP->clipTop = infoP->clipBottom = FALSE;
-			bufOY = 0;
+			/* But if vis covers the full layer on an axis, no clip. */
+			if (visW >= fullW - 2) {
+				infoP->clipLeft = infoP->clipRight = FALSE;
+				bufOX = 0;  /* buffer == full layer width */
+			}
+			if (visH >= fullH - 2) {
+				infoP->clipTop = infoP->clipBottom = FALSE;
+				bufOY = 0;
+			}
+		} else {
+			/* Clip at Comp Bounds is OFF: show edges even outside comp */
+			infoP->clipLeft = infoP->clipRight = infoP->clipTop = infoP->clipBottom = FALSE;
 		}
 
 		infoP->layerW     = fullW;
@@ -1893,6 +1995,7 @@ SmartRender(
 		ctx.cornerRadius  = infoP->cornerRadius * dsX;
 		ctx.surfTension   = infoP->surfTension;
 		ctx.tensionThresh = infoP->tensionThresh;
+		ctx.clipCompBounds = infoP->clipCompBounds;
 		ctx.clipLeft      = infoP->clipLeft;
 		ctx.clipRight     = infoP->clipRight;
 		ctx.clipTop       = infoP->clipTop;

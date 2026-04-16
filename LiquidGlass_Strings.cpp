@@ -22,6 +22,7 @@ TableString g_strs[StrID_NUMTYPES] = {
 	{StrID_Corner_Radius,				"Corner Radius"},
 	{StrID_Surface_Tension,				"Surface Tension"},
 	{StrID_Tension_Threshold,			"Tension Threshold"},
+	{StrID_Clip_Comp_Bounds,			"Clip at Comp Bounds"},
 
 	{StrID_Refract_Group,				"Refraction"},
 	{StrID_Bevel_Width,					"Bevel Width"},
