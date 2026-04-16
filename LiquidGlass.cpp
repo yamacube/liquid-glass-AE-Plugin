@@ -143,6 +143,33 @@ ParamsSetup(
 						 0, 0,
 						 TENSION_THRESHOLD_DISK_ID);
 
+	/* Source Mode: Self Alpha vs External Layer */
+	AEFX_CLR_STRUCT(def);
+	PF_ADD_POPUP(STR(StrID_Source_Mode),
+				 2,  /* 2 choices */
+				 0,  /* default: External Layer */
+				 SOURCE_MODE_DISK_ID);
+	
+	/* Geometry Radius: shape rounding control */
+	AEFX_CLR_STRUCT(def);
+	PF_ADD_FLOAT_SLIDERX(STR(StrID_Geometry_Radius),
+						 LG_GEOMETRY_RADIUS_MIN, LG_GEOMETRY_RADIUS_MAX,
+						 LG_GEOMETRY_RADIUS_MIN, LG_GEOMETRY_RADIUS_MAX,
+						 LG_GEOMETRY_RADIUS_DFLT,
+						 PF_Precision_TENTHS,
+						 0, 0,
+						 GEOMETRY_RADIUS_DISK_ID);
+	
+	/* Expansion: dilate/erode shape (-100 to 100) */
+	AEFX_CLR_STRUCT(def);
+	PF_ADD_FLOAT_SLIDERX(STR(StrID_Expansion),
+						 LG_EXPANSION_MIN, LG_EXPANSION_MAX,
+						 LG_EXPANSION_MIN, LG_EXPANSION_MAX,
+						 LG_EXPANSION_DFLT,
+						 PF_Precision_INTEGER,
+						 0, 0,
+						 EXPANSION_DISK_ID);
+
 	/* Clip at Comp Bounds: clip edges when glass goes outside comp */
 	AEFX_CLR_STRUCT(def);
 	PF_STRCPY(def.name, STR(StrID_Clip_Comp_Bounds));

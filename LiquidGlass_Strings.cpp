@@ -19,7 +19,12 @@ TableString g_strs[StrID_NUMTYPES] = {
 	{StrID_BG_Layer,					"Background Layer"},
 
 	{StrID_Shape_Group,					"Shape Control"},
+	{StrID_Source_Mode,					"Source Mode"},
+	{StrID_Self_Alpha,					"Self Alpha"},
+	{StrID_External_Layer,				"External Layer"},
 	{StrID_Corner_Radius,				"Corner Radius"},
+	{StrID_Geometry_Radius,				"Geometry Radius"},
+	{StrID_Expansion,					"Expansion"},
 	{StrID_Surface_Tension,				"Surface Tension"},
 	{StrID_Tension_Threshold,			"Tension Threshold"},
 	{StrID_Clip_Comp_Bounds,			"Clip at Comp Bounds"},

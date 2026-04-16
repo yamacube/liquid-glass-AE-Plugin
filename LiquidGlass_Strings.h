@@ -14,7 +14,12 @@ typedef enum {
 	StrID_BG_Layer,
 
 	StrID_Shape_Group,
+	StrID_Source_Mode,
+	StrID_Self_Alpha,
+	StrID_External_Layer,
 	StrID_Corner_Radius,
+	StrID_Geometry_Radius,
+	StrID_Expansion,
 	StrID_Surface_Tension,
 	StrID_Tension_Threshold,
 	StrID_Clip_Comp_Bounds,
