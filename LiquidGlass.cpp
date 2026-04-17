@@ -144,11 +144,18 @@ ParamsSetup(
 						 TENSION_THRESHOLD_DISK_ID);
 
 	/* Source Mode: Self Alpha vs External Layer */
-	AEFX_CLR_STRUCT(def);
-	PF_ADD_POPUP(STR(StrID_Source_Mode),
-				 2,  /* 2 choices */
-				 0,  /* default: External Layer */
-				 SOURCE_MODE_DISK_ID);
+	{
+		A_char choiceStr[256];
+		PF_SPRINTF(choiceStr, "%s\012%s", STR(StrID_External_Layer), STR(StrID_Self_Alpha));
+		AEFX_CLR_STRUCT(def);
+		PF_STRCPY(def.name, STR(StrID_Source_Mode));
+		def.param_type = PF_Param_POPUP;
+		def.u.pd.num_choices = 2;
+		def.u.pd.dephault = 0;  /* default: External Layer */
+		def.u.pd.u.namesptr = choiceStr;
+		def.uu.id = SOURCE_MODE_DISK_ID;
+		ERR(PF_ADD_PARAM(in_data, -1, &def));
+	}
 	
 	/* Geometry Radius: shape rounding control */
 	AEFX_CLR_STRUCT(def);
@@ -836,8 +843,12 @@ struct LG_RenderCtx {
 	PF_FpLong iSpread, iBlur, oSpread, oBlur;
 	PF_Pixel  iColor, oColor;
 
-	PF_FpLong cornerRadius;
+	/* Shape control */
+	A_long sourceMode;          /* 0=External Layer, 1=Self Alpha */
+	PF_FpLong geometryRadius;   /* explicit shape rounding control */
+	PF_FpLong expansion;      /* dilate/erode shape via distance threshold shift */
 	PF_FpLong surfTension, tensionThresh;
+	PF_FpLong cornerRadius;    /* legacy - keep for compatibility */
 	PF_Boolean clipCompBounds;  /* clip edges when glass goes outside comp */
 
 	/* Analytical SDF mode (rounded rectangle) */
@@ -1406,10 +1417,16 @@ LG_DoRender(
 	ctx->blurredWorld = &blurredWorld;
 
 	/* ---- Decide: Analytical SDF vs Chamfer distance ---- */
-	/* Use Analytical SDF for visible-rect based glass tracking (B plan).
-	 * SDF represents the VISIBLE RECT as glass plate, positioned at bufOrigin.
-	 * This follows adjustment layer movement. */
-	PF_Boolean useAnalyticalSDF = (alphaSource == src) && (ctx->surfTension < 0.5);
+	/* Self Alpha Mode: use Chamfer distance on the layer's final alpha.
+	 * External Layer Mode: use Analytical SDF for referenced shape layer. */
+	PF_Boolean useAnalyticalSDF = FALSE;
+	if (ctx->sourceMode == 1) {
+		/* Self Alpha Mode: always use Chamfer distance on current layer alpha */
+		useAnalyticalSDF = FALSE;
+	} else {
+		/* External Layer Mode: use Analytical SDF if surfTension is low */
+		useAnalyticalSDF = (alphaSource == src) && (ctx->surfTension < 0.5);
+	}
 	ctx->useAnalyticalSDF = useAnalyticalSDF;
 
 	A_long pixelCount = width * height;
@@ -1635,7 +1652,9 @@ Render(
 	ctx.oSpread      = params[LG_OSHADOW_SPREAD]->u.fs_d.value;
 	ctx.oBlur        = params[LG_OSHADOW_BLUR]->u.fs_d.value;
 	ctx.oColor       = params[LG_OSHADOW_COLOR]->u.cd.value;
-	ctx.cornerRadius = params[LG_CORNER_RADIUS]->u.fs_d.value * dsX;
+	ctx.sourceMode   = params[LG_SOURCE_MODE]->u.pd.value;
+	ctx.geometryRadius = params[LG_GEOMETRY_RADIUS]->u.fs_d.value;
+	ctx.expansion    = params[LG_EXPANSION]->u.fs_d.value;
 	ctx.surfTension  = params[LG_SURFACE_TENSION]->u.fs_d.value;
 	ctx.tensionThresh= params[LG_TENSION_THRESHOLD]->u.fs_d.value;
 	ctx.clipCompBounds = params[LG_CLIP_COMP_BOUNDS]->u.bd.value;
@@ -1711,6 +1730,11 @@ struct LG_PreRenderData {
 	PF_FpLong tintOpacity;
 	PF_FpLong iSpread, iBlur, oSpread, oBlur;
 	PF_Pixel  iColor, oColor;
+	/* Shape control - new Self Alpha Mode parameters */
+	A_long sourceMode;          /* 0=External Layer, 1=Self Alpha */
+	PF_FpLong geometryRadius;   /* explicit geometric rounding */
+	PF_FpLong expansion;      /* dilate/erode via distance threshold shift */
+	/* Legacy - keep for compatibility */
 	PF_FpLong cornerRadius;
 	PF_FpLong surfTension, tensionThresh;
 	PF_Boolean hasShapeLayer;
@@ -1827,10 +1851,27 @@ PreRender(
 	infoP->oColor = cur.u.cd.value;
 
 	/* Shape Control */
+	/* Source Mode: Self Alpha vs External Layer */
+	AEFX_CLR_STRUCT(cur);
+	ERR(PF_CHECKOUT_PARAM(in_data, LG_SOURCE_MODE, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
+	infoP->sourceMode = cur.u.pd.value;
+
+	/* Geometry Radius: explicit shape rounding control */
+	AEFX_CLR_STRUCT(cur);
+	ERR(PF_CHECKOUT_PARAM(in_data, LG_GEOMETRY_RADIUS, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
+	infoP->geometryRadius = cur.u.fs_d.value;
+
+	/* Expansion: dilate/erode shape via distance threshold shift */
+	AEFX_CLR_STRUCT(cur);
+	ERR(PF_CHECKOUT_PARAM(in_data, LG_EXPANSION, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
+	infoP->expansion = cur.u.fs_d.value;
+
+	/* Legacy Corner Radius (keep for compatibility) */
 	AEFX_CLR_STRUCT(cur);
 	ERR(PF_CHECKOUT_PARAM(in_data, LG_CORNER_RADIUS, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
 	infoP->cornerRadius = cur.u.fs_d.value;
 
+	/* Surface Tension: visual smoothing/glass-like tension */
 	AEFX_CLR_STRUCT(cur);
 	ERR(PF_CHECKOUT_PARAM(in_data, LG_SURFACE_TENSION, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
 	infoP->surfTension = cur.u.fs_d.value;
@@ -2020,6 +2061,9 @@ SmartRender(
 		ctx.oBlur         = infoP->oBlur;
 		ctx.oColor        = infoP->oColor;
 		ctx.cornerRadius  = infoP->cornerRadius * dsX;
+		ctx.sourceMode    = infoP->sourceMode;
+		ctx.geometryRadius = infoP->geometryRadius;
+		ctx.expansion     = infoP->expansion;
 		ctx.surfTension   = infoP->surfTension;
 		ctx.tensionThresh = infoP->tensionThresh;
 		ctx.clipCompBounds = infoP->clipCompBounds;

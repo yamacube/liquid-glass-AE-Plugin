@@ -68,6 +68,7 @@ enum {
 	LG_SURFACE_TENSION,
 	LG_TENSION_THRESHOLD,
 	LG_CLIP_COMP_BOUNDS,
+	LG_CORNER_RADIUS,  /* legacy - keep for compatibility */
 	LG_SHAPE_END,
 
 	/* --- Refraction --- */
