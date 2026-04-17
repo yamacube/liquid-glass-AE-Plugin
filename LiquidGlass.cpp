@@ -116,48 +116,22 @@ ParamsSetup(
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_TOPIC(STR(StrID_Shape_Group), SHAPE_START_DISK_ID);
 
-	AEFX_CLR_STRUCT(def);
-	PF_ADD_FLOAT_SLIDERX(STR(StrID_Corner_Radius),
-						 LG_CORNER_RADIUS_MIN, LG_CORNER_RADIUS_MAX,
-						 LG_CORNER_RADIUS_MIN, LG_CORNER_RADIUS_MAX,
-						 LG_CORNER_RADIUS_DFLT,
-						 PF_Precision_TENTHS,
-						 0, 0,
-						 CORNER_RADIUS_DISK_ID);
-
-	AEFX_CLR_STRUCT(def);
-	PF_ADD_FLOAT_SLIDERX(STR(StrID_Surface_Tension),
-						 LG_SURFACE_TENSION_MIN, LG_SURFACE_TENSION_MAX,
-						 LG_SURFACE_TENSION_MIN, LG_SURFACE_TENSION_MAX,
-						 LG_SURFACE_TENSION_DFLT,
-						 PF_Precision_TENTHS,
-						 0, 0,
-						 SURFACE_TENSION_DISK_ID);
-
-	AEFX_CLR_STRUCT(def);
-	PF_ADD_FLOAT_SLIDERX(STR(StrID_Tension_Threshold),
-						 LG_TENSION_THRESH_MIN, LG_TENSION_THRESH_MAX,
-						 LG_TENSION_THRESH_MIN, LG_TENSION_THRESH_MAX,
-						 LG_TENSION_THRESH_DFLT,
-						 PF_Precision_INTEGER,
-						 0, 0,
-						 TENSION_THRESHOLD_DISK_ID);
-
-	/* Source Mode: Self Alpha vs External Layer */
+	/* 1. Source Mode: Self Alpha vs External Layer (enum order) */
 	{
 		A_char choiceStr[256];
-		PF_SPRINTF(choiceStr, "%s\012%s", STR(StrID_External_Layer), STR(StrID_Self_Alpha));
+		/* 1-based: 1=External Layer, 2=Self Alpha */
+		PF_SPRINTF(choiceStr, "%s|%s", STR(StrID_External_Layer), STR(StrID_Self_Alpha));
 		AEFX_CLR_STRUCT(def);
 		PF_STRCPY(def.name, STR(StrID_Source_Mode));
 		def.param_type = PF_Param_POPUP;
 		def.u.pd.num_choices = 2;
-		def.u.pd.dephault = 0;  /* default: External Layer */
+		def.u.pd.dephault = 1;  /* 1-based: External Layer */
 		def.u.pd.u.namesptr = choiceStr;
 		def.uu.id = SOURCE_MODE_DISK_ID;
 		ERR(PF_ADD_PARAM(in_data, -1, &def));
 	}
 	
-	/* Geometry Radius: shape rounding control */
+	/* 2. Geometry Radius: shape rounding control */
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_FLOAT_SLIDERX(STR(StrID_Geometry_Radius),
 						 LG_GEOMETRY_RADIUS_MIN, LG_GEOMETRY_RADIUS_MAX,
@@ -167,7 +141,7 @@ ParamsSetup(
 						 0, 0,
 						 GEOMETRY_RADIUS_DISK_ID);
 	
-	/* Expansion: dilate/erode shape (-100 to 100) */
+	/* 3. Expansion: dilate/erode shape (-100 to 100) */
 	AEFX_CLR_STRUCT(def);
 	PF_ADD_FLOAT_SLIDERX(STR(StrID_Expansion),
 						 LG_EXPANSION_MIN, LG_EXPANSION_MAX,
@@ -177,13 +151,43 @@ ParamsSetup(
 						 0, 0,
 						 EXPANSION_DISK_ID);
 
-	/* Clip at Comp Bounds: clip edges when glass goes outside comp */
+	/* 4. Surface Tension */
+	AEFX_CLR_STRUCT(def);
+	PF_ADD_FLOAT_SLIDERX(STR(StrID_Surface_Tension),
+						 LG_SURFACE_TENSION_MIN, LG_SURFACE_TENSION_MAX,
+						 LG_SURFACE_TENSION_MIN, LG_SURFACE_TENSION_MAX,
+						 LG_SURFACE_TENSION_DFLT,
+						 PF_Precision_TENTHS,
+						 0, 0,
+						 SURFACE_TENSION_DISK_ID);
+
+	/* 5. Tension Threshold */
+	AEFX_CLR_STRUCT(def);
+	PF_ADD_FLOAT_SLIDERX(STR(StrID_Tension_Threshold),
+						 LG_TENSION_THRESH_MIN, LG_TENSION_THRESH_MAX,
+						 LG_TENSION_THRESH_MIN, LG_TENSION_THRESH_MAX,
+						 LG_TENSION_THRESH_DFLT,
+						 PF_Precision_INTEGER,
+						 0, 0,
+						 TENSION_THRESHOLD_DISK_ID);
+
+	/* 6. Clip at Comp Bounds */
 	AEFX_CLR_STRUCT(def);
 	PF_STRCPY(def.name, STR(StrID_Clip_Comp_Bounds));
 	def.param_type = PF_Param_CHECKBOX;
 	def.u.bd.dephault = LG_CLIP_COMP_BOUNDS_DFLT;
 	def.uu.id = CLIP_COMP_BOUNDS_DISK_ID;
 	ERR(PF_ADD_PARAM(in_data, -1, &def));
+	
+	/* 7. Corner Radius (legacy - keep for compatibility) */
+	AEFX_CLR_STRUCT(def);
+	PF_ADD_FLOAT_SLIDERX(STR(StrID_Corner_Radius),
+						 LG_CORNER_RADIUS_MIN, LG_CORNER_RADIUS_MAX,
+						 LG_CORNER_RADIUS_MIN, LG_CORNER_RADIUS_MAX,
+						 LG_CORNER_RADIUS_DFLT,
+						 PF_Precision_TENTHS,
+						 0, 0,
+						 CORNER_RADIUS_DISK_ID);
 
 	AEFX_CLR_STRUCT(def);
 	PF_END_TOPIC(SHAPE_END_DISK_ID);
@@ -1652,7 +1656,7 @@ Render(
 	ctx.oSpread      = params[LG_OSHADOW_SPREAD]->u.fs_d.value;
 	ctx.oBlur        = params[LG_OSHADOW_BLUR]->u.fs_d.value;
 	ctx.oColor       = params[LG_OSHADOW_COLOR]->u.cd.value;
-	ctx.sourceMode   = params[LG_SOURCE_MODE]->u.pd.value;
+	ctx.sourceMode   = params[LG_SOURCE_MODE]->u.pd.value - 1;  /* convert 1-based to 0-based */
 	ctx.geometryRadius = params[LG_GEOMETRY_RADIUS]->u.fs_d.value;
 	ctx.expansion    = params[LG_EXPANSION]->u.fs_d.value;
 	ctx.surfTension  = params[LG_SURFACE_TENSION]->u.fs_d.value;
@@ -1854,7 +1858,7 @@ PreRender(
 	/* Source Mode: Self Alpha vs External Layer */
 	AEFX_CLR_STRUCT(cur);
 	ERR(PF_CHECKOUT_PARAM(in_data, LG_SOURCE_MODE, in_data->current_time, in_data->time_step, in_data->time_scale, &cur));
-	infoP->sourceMode = cur.u.pd.value;
+	infoP->sourceMode = cur.u.pd.value - 1;  /* convert 1-based to 0-based */
 
 	/* Geometry Radius: explicit shape rounding control */
 	AEFX_CLR_STRUCT(cur);
